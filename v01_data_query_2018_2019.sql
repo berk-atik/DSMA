@@ -9,7 +9,6 @@ converted_dates AS (
         business_id,
         to_timestamp(date_str, 'YYYY-MM-DD HH24:MI:SS') AS date_val
     FROM split_dates
-    WHERE date_val IS NOT NULL
 ),
 yearly_checkins AS (
     SELECT 
