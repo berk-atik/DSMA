@@ -9,6 +9,7 @@ converted_dates AS (
         business_id,
         to_timestamp(date_str, 'YYYY-MM-DD HH24:MI:SS') AS date_val
     FROM split_dates
+    WHERE date_val IS NOT NULL
 ),
 yearly_checkins AS (
     SELECT 
@@ -58,27 +59,58 @@ photo_counts AS (
         COUNT(*) AS n_photo
     FROM public.photo
     GROUP BY (j->> 'business_id')::text
+),
+yearly_data AS (
+    SELECT 
+        b.business_id,
+        b.business_lat,
+        b.business_long,
+        b.postal_code,
+        b.overall_business_stars,
+        b.overall_review_count,
+        b.attribute_count,
+        b.business_park,
+        b.business_happy_hour,
+        b.business_price,
+        b.business_open,
+        COALESCE(p.n_photo, 0) AS n_photo,
+        yc.year,
+        yc.check_in_count,
+        COALESCE(yr.review_count, 0) AS review_count,
+        COALESCE(yr.average_stars, 0.0) AS average_stars
+    FROM business_data b
+    LEFT JOIN photo_counts p ON b.business_id = p.business_id
+    LEFT JOIN yearly_checkins yc ON b.business_id = yc.business_id
+    LEFT JOIN yearly_reviews yr ON b.business_id = yr.business_id AND yc.year = yr.year
+    WHERE yc.year IN (2018, 2019)
 )
+-- Filter to include only businesses with entries for both 2018 and 2019
 SELECT 
-    b.business_id,
-    b.business_lat,
-    b.business_long,
-    b.postal_code,
-    b.overall_business_stars,
-    b.overall_review_count,
-    b.attribute_count,
-    b.business_park,
-    b.business_happy_hour,
-    b.business_price,
-    b.business_open,
-    COALESCE(p.n_photo, 0) AS n_photo,
-    yc.year,
-    yc.check_in_count,
-    COALESCE(yr.review_count, 0) AS review_count,
-    COALESCE(yr.average_stars, 0.0) AS average_stars
-FROM business_data b
-LEFT JOIN photo_counts p ON b.business_id = p.business_id
-LEFT JOIN yearly_checkins yc ON b.business_id = yc.business_id
-LEFT JOIN yearly_reviews yr ON b.business_id = yr.business_id AND yc.year = yr.year
-WHERE yc.year IN (2018, 2019)
-ORDER BY b.business_id, yc.year;
+    yd.business_id,
+    yd.business_lat,
+    yd.business_long,
+    yd.postal_code,
+    yd.overall_business_stars,
+    yd.overall_review_count,
+    yd.attribute_count,
+    yd.business_park,
+    yd.business_happy_hour,
+    yd.business_price,
+    yd.business_open,
+    yd.n_photo,
+    yd.year,
+    yd.check_in_count,
+    yd.review_count,
+    yd.average_stars
+FROM yearly_data yd
+WHERE yd.business_id IN (
+    SELECT business_id
+    FROM yearly_data
+    WHERE year = 2018
+)
+AND yd.business_id IN (
+    SELECT business_id
+    FROM yearly_data
+    WHERE year = 2019
+)
+ORDER BY yd.business_id, yd.year;
