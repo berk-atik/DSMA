@@ -85,7 +85,7 @@ business_data AS (
         (j->'attributes'->'BusinessParking'->>'validated')::boolean AS parking_validated,
         (j->'attributes'->'BusinessParking'->>'lot')::boolean AS parking_lot,
         (j->'attributes'->'BusinessParking'->>'valet')::boolean AS parking_valet
-    FROM public.business
+    FROM public.business j
     WHERE STRPOS(j->> 'categories', 'Restaurants') <> 0  -- Filter for businesses in the Restaurants category
       AND j->> 'city' = 'Philadelphia'  -- Filter for businesses in Philadelphia
 ),
@@ -171,21 +171,6 @@ SELECT
     yd.business_open,
     yd.categories,
     yd.hours,
-    yd.Alcohol,
-    yd.OutdoorSeating,
-    yd.RestaurantsTableService,
-    yd.BikeParking,
-    yd.HappyHour,
-    yd.BYOB,
-    yd.BusinessAcceptsCreditCards,
-    yd.RestaurantsCounterService,
-    yd.HasTV,
-    yd.RestaurantsPriceRange2,
-    yd.RestaurantsReservations,
-    yd.RestaurantsDelivery,
-    yd.WiFi,
-    yd.BusinessParking,
-    yd.RestaurantsTakeOut,
     yd.IsRomantic,
     yd.IsIntimate,
     yd.IsTouristy,
@@ -216,4 +201,4 @@ AND yd.business_id IN (
     FROM yearly_data
     WHERE year = 2019
 )
-ORDER BY yd.business_id, yd.year;  -- Order by business_id and year
+ORDER BY yd.business_id, yd.year; -- Order by business_id and year
