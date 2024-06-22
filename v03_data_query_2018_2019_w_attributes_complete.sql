@@ -38,6 +38,7 @@ yearly_reviews AS (
 ),
 
 -- Extract and transform data from the 'business' table
+-- Extract and transform data from the 'business' table
 business_data AS (
     SELECT 
         (j->> 'business_id')::text AS business_id, -- Extract business_id as text
@@ -53,6 +54,20 @@ business_data AS (
         (j->> 'is_open')::integer AS business_open, -- Extract open status
         (j->> 'categories') AS categories, -- Extract categories
         (j->> 'hours') AS hours, -- Extract hours of operation
+        REPLACE(j->'attributes'->>'Alcohol', 'u\'', '') AS Alcohol, -- Extract Alcohol
+        REPLACE(j->'attributes'->>'OutdoorSeating', 'u\'', '') AS OutdoorSeating, -- Extract OutdoorSeating
+        REPLACE(j->'attributes'->>'RestaurantsTableService', 'u\'', '') AS RestaurantsTableService, -- Extract RestaurantsTableService
+        REPLACE(j->'attributes'->>'BikeParking', 'u\'', '') AS BikeParking, -- Extract BikeParking
+        REPLACE(j->'attributes'->>'HappyHour', 'u\'', '') AS HappyHour, -- Extract HappyHour
+        REPLACE(j->'attributes'->>'BYOB', 'u\'', '') AS BYOB, -- Extract Bring your own booze
+        REPLACE(j->'attributes'->>'BusinessAcceptsCreditCards', 'u\'', '') AS BusinessAcceptsCreditCards, -- Extract BusinessAcceptsCreditCards
+        REPLACE(j->'attributes'->>'RestaurantsCounterService', 'u\'', '') AS RestaurantsCounterService, -- Extract RestaurantsCounterService
+        REPLACE(j->'attributes'->>'HasTV', 'u\'', '') AS HasTV, -- Extract if business got a tv
+        REPLACE(j->'attributes'->>'RestaurantsPriceRange2', 'u\'', '') AS RestaurantsPriceRange2, -- Extract RestaurantsPriceRange
+        REPLACE(j->'attributes'->>'RestaurantsReservations', 'u\'', '') AS RestaurantsReservations, -- Extract RestaurantsReservations
+        REPLACE(j->'attributes'->>'RestaurantsDelivery', 'u\'', '') AS RestaurantsDelivery, -- Extract RestaurantsDelivery
+        REPLACE(j->'attributes'->>'WiFi', 'u\'', '') AS WiFi, -- Extract WiFi
+        REPLACE(j->'attributes'->>'RestaurantsTakeOut', 'u\'', '') AS RestaurantsTakeOut, -- Extract RestaurantsTakeOut
         j->'attributes' AS attributes_json, -- Extract attributes as JSON
         -- Clean and convert Ambience and BusinessParking attributes to JSONB
         REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(j->'attributes'->>'Ambience', '''', '"'), 'u"', '"'), 'False', 'false'), 'True', 'true'), 'None', 'null')::jsonb AS Ambience_jsonb,
@@ -60,13 +75,14 @@ business_data AS (
     FROM public.business j
     WHERE STRPOS(j->> 'categories', 'Restaurants') <> 0 -- Include only businesses categorized as Restaurants
       AND j->> 'city' = 'Philadelphia' -- Include only businesses in Philadelphia
-),
+)
+,
 
 -- Count the number of photos per business
 photo_counts AS (
     SELECT 
         (j->> 'business_id')::text AS business_id, -- Extract business_id as text
-        COUNT(*) AS n_photo -- Count  number of photos
+        COUNT(*) AS n_photo -- Count number of photos
     FROM public.photo
     GROUP BY (j->> 'business_id')::text
 ),
@@ -86,13 +102,27 @@ yearly_data AS (
         b.overall_review_count, -- Overall review count
         b.business_open, -- Open status
         b.categories, -- Categories
-        b.hours, -- opening hours
+        b.hours, -- Opening hours
+        b.Alcohol, -- Alcohol attribute
+        b.OutdoorSeating, -- OutdoorSeating attribute
+        b.RestaurantsTableService, -- RestaurantsTableService attribute
+        b.BikeParking, -- BikeParking attribute
+        b.HappyHour, -- HappyHour attribute
+        b.BYOB, -- BYOB attribute
+        b.BusinessAcceptsCreditCards, -- BusinessAcceptsCreditCards attribute
+        b.RestaurantsCounterService, -- RestaurantsCounterService attribute
+        b.HasTV, -- HasTV attribute
+        b.RestaurantsPriceRange2, -- RestaurantsPriceRange2 attribute
+        b.RestaurantsReservations, -- RestaurantsReservations attribute
+        b.RestaurantsDelivery, -- RestaurantsDelivery attribute
+        b.WiFi, -- WiFi attribute
+        b.RestaurantsTakeOut, -- RestaurantsTakeOut attribute
         b.attributes_json, -- Attributes JSON
         COALESCE(p.n_photo, 0) AS n_photo, -- Number of photos (default to 0 if no photos)
         yc.year, -- Year from yearly_checkins
         yc.check_in_count, -- Check-in count from yearly_checkins
-        COALESCE(yr.review_count, 0) AS review_count, -- Review count (default to 0 if no reviews, need to be excluded later)
-        COALESCE(yr.average_stars, 0.0) AS average_stars, -- Average star rating (default to 0.0 if no reviews, same exclude later)
+        COALESCE(yr.review_count, 0) AS review_count, -- Review count (default to 0 if no reviews)
+        COALESCE(yr.average_stars, 0.0) AS average_stars, -- Average star rating (default to 0.0 if no reviews)
         -- Extract Ambience attributes
         (b.Ambience_jsonb->>'romantic')::boolean AS IsRomantic,
         (b.Ambience_jsonb->>'intimate')::boolean AS IsIntimate,
@@ -105,6 +135,7 @@ yearly_data AS (
         (b.Ambience_jsonb->>'casual')::boolean AS IsCasual,
         -- Extract BusinessParking attributes
         (b.BusinessParking_jsonb->>'garage')::boolean AS parking_garage,
+        (b.BusinessParking_jsonb->>'street')::boolean AS parking,
         (b.BusinessParking_jsonb->>'street')::boolean AS parking_street,
         (b.BusinessParking_jsonb->>'validated')::boolean AS parking_validated,
         (b.BusinessParking_jsonb->>'lot')::boolean AS parking_lot,
@@ -130,7 +161,7 @@ SELECT
     yd.overall_review_count, -- Overall review count
     yd.business_open, -- Open status
     yd.categories, -- Categories
-    yd.hours, -- business Hours
+    yd.hours, -- Business hours
     yd.IsRomantic, -- Ambience attribute: romantic
     yd.IsIntimate, -- Ambience attribute: intimate
     yd.IsTouristy, -- Ambience attribute: touristy
@@ -145,6 +176,20 @@ SELECT
     yd.parking_validated, -- Parking attribute: validated
     yd.parking_lot, -- Parking attribute: lot
     yd.parking_valet, -- Parking attribute: valet
+    yd.Alcohol, -- Alcohol attribute
+    yd.OutdoorSeating, -- OutdoorSeating attribute
+    yd.RestaurantsTableService, -- RestaurantsTableService attribute
+    yd.BikeParking, -- BikeParking attribute
+    yd.HappyHour, -- HappyHour attribute
+    yd.BYOB, -- BYOB attribute
+    yd.BusinessAcceptsCreditCards, -- BusinessAcceptsCreditCards attribute
+    yd.RestaurantsCounterService, -- RestaurantsCounterService attribute
+    yd.HasTV, -- HasTV attribute
+    yd.RestaurantsPriceRange2, -- RestaurantsPriceRange2 attribute
+    yd.RestaurantsReservations, -- RestaurantsReservations attribute
+    yd.RestaurantsDelivery, -- RestaurantsDelivery attribute
+    yd.WiFi, -- WiFi attribute
+    yd.RestaurantsTakeOut, -- RestaurantsTakeOut attribute
     yd.n_photo, -- Number of photos
     yd.year, -- Year
     yd.check_in_count, -- Check-in count
