@@ -31,7 +31,7 @@ yearly_reviews AS (
         (j->> 'business_id')::text AS business_id, -- Extract business_id as text
         EXTRACT(YEAR FROM to_timestamp((j->> 'date')::text, 'YYYY-MM-DD HH24:MI:SS')) AS year, -- Extract the year from the review date
         COUNT(*) AS review_count, -- Count number of reviews
-        ROUND(AVG((j->> 'stars')::numeric), 2) AS average_stars -- Calculate the mean of rating
+        ROUND(AVG((j->> 'stars')::numeric), 4) AS average_stars -- Calculate the mean of rating
     FROM public.review
     WHERE to_timestamp((j->> 'date')::text, 'YYYY-MM-DD HH24:MI:SS') IS NOT NULL -- Exclude null timestamps
     GROUP BY (j->> 'business_id')::text, EXTRACT(YEAR FROM to_timestamp((j->> 'date')::text, 'YYYY-MM-DD HH24:MI:SS'))
