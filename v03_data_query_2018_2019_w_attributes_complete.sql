@@ -53,20 +53,20 @@ business_data AS (
         (j->> 'is_open')::integer AS business_open, -- Extract open status
         (j->> 'categories') AS categories, -- Extract categories
         (j->> 'hours') AS hours, -- Extract hours of operation
-        REPLACE(j->'attributes'->>'Alcohol', 'u\'', '') AS Alcohol, -- Extract Alcohol
-        REPLACE(j->'attributes'->>'OutdoorSeating', 'u\'', '') AS OutdoorSeating, -- Extract OutdoorSeating
-        REPLACE(j->'attributes'->>'RestaurantsTableService', 'u\'', '') AS RestaurantsTableService, -- Extract RestaurantsTableService
-        REPLACE(j->'attributes'->>'BikeParking', 'u\'', '') AS BikeParking, -- Extract BikeParking
-        REPLACE(j->'attributes'->>'HappyHour', 'u\'', '') AS HappyHour, -- Extract HappyHour
-        REPLACE(j->'attributes'->>'BYOB', 'u\'', '') AS BYOB, -- Extract Bring your own booze
-        REPLACE(j->'attributes'->>'BusinessAcceptsCreditCards', 'u\'', '') AS BusinessAcceptsCreditCards, -- Extract BusinessAcceptsCreditCards
-        REPLACE(j->'attributes'->>'RestaurantsCounterService', 'u\'', '') AS RestaurantsCounterService, -- Extract RestaurantsCounterService
-        REPLACE(j->'attributes'->>'HasTV', 'u\'', '') AS HasTV, -- Extract if business got a tv
-        REPLACE(j->'attributes'->>'RestaurantsPriceRange2', 'u\'', '') AS RestaurantsPriceRange2, -- Extract RestaurantsPriceRange
-        REPLACE(j->'attributes'->>'RestaurantsReservations', 'u\'', '') AS RestaurantsReservations, -- Extract RestaurantsReservations
-        REPLACE(j->'attributes'->>'RestaurantsDelivery', 'u\'', '') AS RestaurantsDelivery, -- Extract RestaurantsDelivery
-        REPLACE(j->'attributes'->>'WiFi', 'u\'', '') AS WiFi, -- Extract WiFi
-        REPLACE(j->'attributes'->>'RestaurantsTakeOut', 'u\'', '') AS RestaurantsTakeOut, -- Extract RestaurantsTakeOut
+        REPLACE(j->'attributes'->>'Alcohol', 'u''', '') AS Alcohol, -- Extract Alcohol
+        (j->'attributes'->>'OutdoorSeating') AS OutdoorSeating, -- Extract OutdoorSeating
+        (j->'attributes'->>'RestaurantsTableService') AS RestaurantsTableService, -- Extract RestaurantsTableService
+        (j->'attributes'->>'BikeParking') AS BikeParking, -- Extract BikeParking
+        (j->'attributes'->>'HappyHour') AS HappyHour, -- Extract HappyHour
+        (j->'attributes'->>'BYOB') AS BYOB, -- Extract Bring your own booze
+        (j->'attributes'->>'BusinessAcceptsCreditCards') AS BusinessAcceptsCreditCards, -- Extract BusinessAcceptsCreditCards
+        (j->'attributes'->>'RestaurantsCounterService') AS RestaurantsCounterService, -- Extract RestaurantsCounterService
+        (j->'attributes'->>'HasTV') AS HasTV, -- Extract if business got a TV
+        (j->'attributes'->>'RestaurantsPriceRange2') AS RestaurantsPriceRange2, -- Extract RestaurantsPriceRange
+        (j->'attributes'->>'RestaurantsReservations') AS RestaurantsReservations, -- Extract RestaurantsReservations
+        (j->'attributes'->>'RestaurantsDelivery') AS RestaurantsDelivery, -- Extract RestaurantsDelivery
+        REPLACE(j->'attributes'->>'WiFi', 'u''', '') AS WiFi, -- Extract WiFi
+        (j->'attributes'->>'RestaurantsTakeOut') AS RestaurantsTakeOut, -- Extract RestaurantsTakeOut
         j->'attributes' AS attributes_json, -- Extract attributes as JSON
         -- Clean and convert Ambience and BusinessParking attributes to JSONB
         REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(j->'attributes'->>'Ambience', '''', '"'), 'u"', '"'), 'False', 'false'), 'True', 'true'), 'None', 'null')::jsonb AS Ambience_jsonb,
