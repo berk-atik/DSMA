@@ -38,7 +38,6 @@ yearly_reviews AS (
 ),
 
 -- Extract and transform data from the 'business' table
--- Extract and transform data from the 'business' table
 business_data AS (
     SELECT 
         (j->> 'business_id')::text AS business_id, -- Extract business_id as text
@@ -75,8 +74,7 @@ business_data AS (
     FROM public.business j
     WHERE STRPOS(j->> 'categories', 'Restaurants') <> 0 -- Include only businesses categorized as Restaurants
       AND j->> 'city' = 'Philadelphia' -- Include only businesses in Philadelphia
-)
-,
+),
 
 -- Count the number of photos per business
 photo_counts AS (
