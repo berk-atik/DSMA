@@ -68,6 +68,7 @@ business_data AS (
         REPLACE(j->'attributes'->>'WiFi', 'u''', '') AS WiFi, -- Extract WiFi
         (j->'attributes'->>'RestaurantsTakeOut') AS RestaurantsTakeOut, -- Extract RestaurantsTakeOut
         j->'attributes' AS attributes_json, -- Extract attributes as JSON
+        (LENGTH((j->> 'attributes')::text) - LENGTH(REPLACE((j->> 'attributes')::text, 'True', '')))/4 AS attribute_count, --to count number of attributes
         -- Clean and convert Ambience and BusinessParking attributes to JSONB
         REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(j->'attributes'->>'Ambience', '''', '"'), 'u"', '"'), 'False', 'false'), 'True', 'true'), 'None', 'null')::jsonb AS Ambience_jsonb,
         REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(j->'attributes'->>'BusinessParking', '''', '"'), 'u"', '"'), 'False', 'false'), 'True', 'true'), 'None', 'null')::jsonb AS BusinessParking_jsonb
@@ -116,6 +117,7 @@ yearly_data AS (
         b.WiFi, -- WiFi attribute
         b.RestaurantsTakeOut, -- RestaurantsTakeOut attribute
         b.attributes_json, -- Attributes JSON
+        b.attribute_count, -- Number of attributes
         COALESCE(p.n_photo, 0) AS n_photo, -- Number of photos (default to 0 if no photos)
         yc.year, -- Year from yearly_checkins
         yc.check_in_count, -- Check-in count from yearly_checkins
@@ -190,6 +192,7 @@ SELECT
     yd.RestaurantsTakeOut, -- RestaurantsTakeOut attribute
     yd.n_photo, -- Number of photos
     yd.year, -- Year
+    yd.attribute_count, -- Number of attributes
     yd.check_in_count, -- Check-in count
     yd.review_count, -- Review count
     yd.average_stars -- Average star rating
