@@ -108,8 +108,7 @@ write_csv(all_business_proximity_scores, "~/dsma_project/yelp_internal_data_with
 # Display the combined plot
 print(combined_plot)
 
-# Optional: Visualize the geographic distribution of scaled capped business proximities
-# Assuming latitude and longitude columns exist in yelp_internal_data
+# Visualizing SCBP along Lat and Long
 ggplot(yelp_internal_data, aes(x = business_long, y = business_lat, color = scaled_capped_business_proximity)) +
   geom_point() +
   ggtitle("Geographic Distribution of Scaled Capped Business Proximities") +
