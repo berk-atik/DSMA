@@ -903,6 +903,431 @@ for (var in paste0("scaled_capped_", population_vars)) {
 write_csv(yelp_data_transformed_before_MICE, "/Users/helua1/Desktop/Master/2. Semester/DSMA/yelp_data_transformed_capped_scaled.csv")
 
 
+library(tidyr)
+library(dplyr)
+library(tidyr)
+library(ggplot2)
+library(psych)
+
+# Adding a small constant to avoid log(0) issues
+epsilon <- 1e-10
+
+# Select and transform columns, ensuring log transformations are handled correctly
+regressiondata <- yelp_data_transformed_before_MICE %>%
+  select(check_in_count_2018,
+         check_in_count_2019,
+         average_stars_2018,
+         average_stars_2019,
+         review_count_2018,
+         review_count_2019,
+         n_photo,
+         surrounding_children_2018,
+         surrounding_children_2019,
+         scaled_capped_surrounding_children_2018,
+         scaled_capped_surrounding_children_2019,
+         capped_surrounding_youth_2018,
+         capped_surrounding_youth_2019,
+         scaled_capped_surrounding_youth_2018,
+         scaled_capped_surrounding_youth_2019,
+         capped_surrounding_adults_2018,
+         capped_surrounding_adults_2019,
+         scaled_capped_surrounding_adults_2018,
+         scaled_capped_surrounding_adults_2019,
+         capped_surrounding_elders_2018,
+         capped_surrounding_elders_2019,
+         scaled_capped_surrounding_elders_2018,
+         scaled_capped_surrounding_elders_2019,
+         scaled_capped_business_proximity,
+         landmarks_nearby) %>%
+  mutate(
+    log_check_in_count_2018 = log(check_in_count_2018 + epsilon),
+    log_check_in_count_2019 = log(check_in_count_2019 + epsilon),
+    log_average_stars_2018 = log(average_stars_2018 + epsilon),
+    log_average_stars_2019 = log(average_stars_2019 + epsilon),
+    log_review_count_2018 = log(review_count_2018 + epsilon),
+    log_review_count_2019 = log(review_count_2019 + epsilon),
+    log_n_photo = log(n_photo + epsilon)
+  )
+
+# Compute descriptive statistics
+descriptive_stats <- describe(regressiondata)
+
+# View the descriptive statistics
+print(descriptive_stats)
+
+# Transforming the dataset from wide to long format
+regressiondata_long <- regressiondata %>%
+  pivot_longer(
+    cols = -c(landmarks_nearby, scaled_capped_business_proximity, n_photo, log_n_photo), # Exclude the static columns and ID from pivoting
+    names_to = c(".value", "year"),
+    names_sep = "_(?!.*_)", # Use regular expression to split at the last underscore
+    names_transform = list(year = as.integer) # Transform the 'year' part to integer
+  )
+
+# Relocating columns to have static columns first, followed by year, then the remaining columns
+regressiondata_long <- regressiondata_long %>%
+  relocate(landmarks_nearby, scaled_capped_business_proximity, n_photo, year, .before = everything())
+
+# View the resulting long format dataset
+print(regressiondata_long)
+
+# Load necessary packages
+install.packages("tidyverse")
+install.packages("boot")
+install.packages("mice")
+install.packages("car")
+install.packages("nortest")
+install.packages("lmtest")
+
+library(tidyr)
+library(dplyr)
+library(boot)
+library(mice)
+library(car)
+library(ggplot2)
+library(nortest)
+library(lmtest)
+
+# Perform a single imputation using mice
+imputed_data <- mice(regressiondata_long, m = 1, method = 'pmm', seed = 123)
+complete_data <- complete(imputed_data, 1)
+
+# Extract residuals
+residuals <- residuals(model)
+
+# 1. Normality of Residuals: Q-Q Plot and Histogram
+qqnorm(residuals)
+qqline(residuals, col = "red")
+ggplot(data = data.frame(residuals), aes(sample = residuals)) +
+  stat_qq() +
+  stat_qq_line(col = "red") +
+  ggtitle("Q-Q Plot of Residuals") +
+  xlab("Theoretical Quantiles") +
+  ylab("Sample Quantiles")
+
+ggplot(data = data.frame(residuals), aes(x = residuals)) +
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "lightblue", color = "black") +
+  geom_density(color = "blue") +
+  ggtitle("Residual Histogram")
+
+# Kolmogorov-Smirnov Test for normality
+ks_result <- ks.test(scale(residuals), "pnorm")
+print(ks_result)
+
+# Anderson-Darling Test for normality
+ad_result <- ad.test(residuals)
+print(ad_result)
+
+# 2. Homoscedasticity: Plot residuals vs. fitted values
+plot(model$fitted.values, residuals,
+     main = "Residuals vs Fitted Values",
+     xlab = "Fitted Values",
+     ylab = "Residuals")
+abline(h = 0, col = "red")
+
+# Breusch-Pagan Test for heteroscedasticity
+bptest(model)
+
+# 3. Multicollinearity: Variance Inflation Factor (VIF)
+vif_values <- vif(model)
+print(vif_values)
+
+# 4. Linearity: Component + Residual plot
+crPlots(model)
+
+
+
+# ----------
+# Ensure all necessary packages are installed and loaded
+if (!requireNamespace("Matrix", quietly = TRUE)) {
+  install.packages("Matrix", type = "binary")
+}
+
+if (!requireNamespace("MASS", quietly = TRUE)) {
+  install.packages("MASS")
+}
+
+if (!requireNamespace("boot", quietly = TRUE)) {
+  install.packages("boot")
+}
+
+library(Matrix)
+library(dplyr)
+library(tidyr)
+library(MASS)
+library(boot)
+
+# Log-transform certain variables to improve normality and stabilize variance
+complete_data$log_average_stars <- log(complete_data$average_stars + 1)
+complete_data$log_review_count <- log(complete_data$review_count + 1)
+complete_data$log_n_photo <- log(complete_data$n_photo + 1)
+
+# Fit a robust regression model using transformed variables
+model_robust <- rlm(log_check_in_count ~ 
+                      log_average_stars + 
+                      log_review_count + 
+                      log_n_photo + 
+                      scaled_capped_surrounding_adults +
+                      scaled_capped_surrounding_elders +
+                      scaled_capped_business_proximity + 
+                      landmarks_nearby +
+                      year, 
+                    data = complete_data)
+
+# Summary of the robust regression model
+summary(model_robust)
+
+# Define the regression function for bootstrapping
+boot_fn <- function(data, indices) {
+  # Subset data based on bootstrapped indices
+  d <- data[indices, ]
+  # Fit the robust regression model
+  model <- rlm(log_check_in_count ~ 
+                 log_average_stars + 
+                 log_review_count + 
+                 log_n_photo + 
+                 scaled_capped_surrounding_adults +
+                 scaled_capped_surrounding_elders +
+                 scaled_capped_business_proximity + 
+                 landmarks_nearby +
+                 year, 
+               data = d)
+  # Return the coefficients
+  return(coef(model))
+}
+
+# Perform bootstrapping with 10000 replications
+set.seed(123) # For reproducibility
+boot_results <- boot(data = complete_data, statistic = boot_fn, R = 10000)
+
+# Extract bootstrap results
+boot_coefficients <- boot_results$t
+
+# Calculate 95% confidence intervals for the coefficients
+boot_ci <- lapply(1:ncol(boot_coefficients), function(i) {
+  boot.ci(boot_results, type = "perc", index = i)
+})
+
+# Print summary of bootstrap results
+print(summary(boot_results))
+
+# Print confidence intervals for each coefficient
+for (i in 1:length(boot_ci)) {
+  cat("\nConfidence interval for coefficient", names(coef(model_robust))[i], ":\n")
+  print(boot_ci[[i]])
+}
+
+#-----
+# Adding a small constant to avoid log(0) issues
+epsilon <- 1e-10
+
+# Select and transform columns, ensuring log transformations are handled correctly
+MLdata <- yelp_data_transformed_before_MICE %>%
+  select(check_in_count_2018,
+         check_in_count_2019,
+         average_stars_2018,
+         average_stars_2019,
+         review_count_2018,
+         review_count_2019,
+         n_photo,
+         scaled_capped_surrounding_adults_2018,
+         scaled_capped_surrounding_adults_2019,
+         scaled_capped_surrounding_elders_2018,
+         scaled_capped_surrounding_elders_2019,
+         scaled_capped_business_proximity,
+         landmarks_nearby,
+         isromantic,
+         isintimate,
+         istouristy,
+         ishipster,
+         isdivey,
+         isclassy,
+         istrendy,
+         isupscale,
+         iscasual,
+         parking_garage,
+         parking_street,
+         parking_validated,
+         parking_lot,
+         parking_valet,
+         bikeparking,
+         alcohol,
+         wifi,
+         outdoorseating,
+         restaurantstableservice,
+         happyhour,
+         byob,
+         businessacceptscreditcards,
+         restaurantsdelivery,
+         restaurantstakeout,
+         restaurantspricerange2,
+         hastv,
+         restaurantsreservations) %>%
+  mutate(
+    log_check_in_count_2018 = log(check_in_count_2018 + epsilon),
+    log_check_in_count_2019 = log(check_in_count_2019 + epsilon),
+    log_average_stars_2018 = log(average_stars_2018 + epsilon),
+    log_average_stars_2019 = log(average_stars_2019 + epsilon),
+    log_review_count_2018 = log(review_count_2018 + epsilon),
+    log_review_count_2019 = log(review_count_2019 + epsilon),
+    log_n_photo = log(n_photo + epsilon)
+  )
+
+# Compute descriptive statistics
+descriptive_statsML <- describe(MLdata)
+
+# View the descriptive statistics
+print(descriptive_statsML)
+
+# Transforming the dataset from wide to long format
+MLdata_long <- MLdata %>%
+  pivot_longer(
+    cols = -c(landmarks_nearby, 
+              scaled_capped_business_proximity, 
+              n_photo,
+              log_n_photo,
+              isromantic, 
+              isintimate,
+              istouristy,
+              ishipster,
+              isdivey,
+              isclassy,
+              istrendy,
+              isupscale,
+              iscasual,
+              parking_garage,
+              parking_street,
+              parking_validated,
+              parking_lot,
+              parking_valet,
+              bikeparking,
+              alcohol,
+              wifi,
+              outdoorseating,
+              restaurantstableservice,
+              happyhour,
+              byob,
+              businessacceptscreditcards,
+              
+              restaurantsdelivery,
+              restaurantstakeout,
+              restaurantspricerange2,
+              hastv,
+              restaurantsreservations), # Exclude the static columns and ID from pivoting
+    names_to = c(".value", "year"),
+    names_sep = "_(?!.*_)", # Use regular expression to split at the last underscore
+    names_transform = list(year = as.integer) # Transform the 'year' part to integer
+  )
+
+
+
+# Relocating columns to have static columns first, followed by year, then the remaining columns
+MLdata_long <- MLdata_long %>%
+  relocate(landmarks_nearby, scaled_capped_business_proximity, n_photo, log_n_photo,
+           isromantic, 
+           isintimate,
+           istouristy,
+           ishipster,
+           isdivey,
+           isclassy,
+           istrendy,
+           isupscale,
+           iscasual,
+           parking_garage,
+           parking_street,
+           parking_validated,
+           parking_lot,
+           parking_valet,
+           bikeparking,
+           alcohol,
+           wifi,
+           outdoorseating,
+           restaurantstableservice,
+           happyhour,
+           byob,
+           businessacceptscreditcards,
+           
+           restaurantsdelivery,
+           restaurantstakeout,
+           restaurantspricerange2,
+           hastv,
+           restaurantsreservations, year, .before = everything())
+
+# View the resulting long format dataset
+print(regressiondata_long)
+
+
+
+# Exclude cases where log_average_stars is 0
+MLdata_long <- MLdata_long %>%
+  filter(log_average_stars != 0)
+
+# Check for missing data before imputation
+summary(MLdata_long)
+
+# Run the mice imputation with diagnostic information
+MiceImputedData_2 <- mice(MLdata_long, m=1, maxit = 20, method = 'pmm', seed = 54544, printFlag = TRUE)
+
+# Inspect the logged events to understand any issues
+logged_events <- MiceImputedData_2$loggedEvents
+print(logged_events)
+
+
+
+# Load necessary packages
+library(dplyr)
+library(corrplot)
+
+# Select the relevant variables
+relevant_vars <- MiceCompleteData_2 %>%
+  select(
+    landmarks_nearby,
+    scaled_capped_business_proximity,
+    log_n_photo,
+    isromantic,
+    isintimate,
+    istouristy,
+    ishipster,
+    isdivey,
+    isclassy,
+    istrendy,
+    isupscale,
+    iscasual,
+    parking_garage,
+    parking_street,
+    parking_validated,
+    parking_lot,
+    parking_valet,
+    bikeparking,
+    alcohol,
+    wifi,
+    outdoorseating,
+    restaurantstableservice,
+    happyhour,
+    byob,
+    businessacceptscreditcards,
+    restaurantsdelivery,
+    restaurantstakeout,
+    restaurantspricerange2,
+    hastv,
+    restaurantsreservations,
+    log_check_in_count,
+    log_average_stars,
+    log_review_count,
+    scaled_capped_surrounding_adults,
+    scaled_capped_surrounding_elders,
+    year
+  )
+
+# Create the correlation matrix
+corr_matrix <- cor(relevant_vars, use = "complete.obs")
+
+# Print the correlation matrix plot to the R graphics device
+par(mar = c(2, 2, 2, 2))  # Increase the margins
+corrplot(corr_matrix, method = "color", type = "upper", 
+         tl.col = "black", tl.srt = 45, tl.cex = 1, 
+         addCoef.col = NULL, cl.cex = 1.0, number.cex = 0.7)
+
 
 
 
