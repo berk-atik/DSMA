@@ -1,7 +1,8 @@
 # DSMA
 
 *Workflow Structure: The generated output data of each section is the input data source for the subsequent section.
-                          The input and output data for each section are available in csv format in the folder of the respective section.
+
+*The input and output data for each section are available in csv format in the folder of the respective section.
 
 *AI source queries used in the code can be find under the "Sources_for_Code.txt" in the main branch.
 
